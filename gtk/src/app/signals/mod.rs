@@ -174,6 +174,9 @@ impl App {
                         let finished = Arc::new(
                             (0..ndestinations).map(|_| Atomic::new(false)).collect::<Vec<_>>(),
                         );
+                        let verifying = Arc::new(
+                            (0..ndestinations).map(|_| Atomic::new(false)).collect::<Vec<_>>(),
+                        );
 
                         let _ =
                             state.back_event_tx.send(BackgroundEvent::Flash(FlashRequest::new(
@@ -182,12 +185,15 @@ impl App {
                                 flash_status.clone(),
                                 progress.clone(),
                                 finished.clone(),
+                                verifying.clone(),
+                                state.check.get(),
                             )));
 
                         tasks = Some(FlashTask {
                             previous: Arc::new(Mutex::new(vec![[0; 7]; ndestinations])),
                             progress,
                             finished,
+                            verifying,
                         });
                     }
                     // When the flashing view is active, and thus an image is flashing.
@@ -209,6 +215,7 @@ impl App {
                                 let prev_values = &mut previous[id];
                                 let progress = &tasks.progress[id];
                                 let finished = &tasks.finished[id];
+                                let verifying = &tasks.verifying[id];
 
                                 let raw_value = progress.load(Ordering::SeqCst);
                                 let task_is_finished = finished.load(Ordering::SeqCst);
@@ -224,17 +231,26 @@ impl App {
                                 if task_is_finished {
                                     label.set_label("Complete");
                                 } else {
-                                    prev_values[1] = prev_values[2];
-                                    prev_values[2] = prev_values[3];
-                                    prev_values[3] = prev_values[4];
-                                    prev_values[4] = prev_values[5];
-                                    prev_values[5] = prev_values[6];
-                                    prev_values[6] = raw_value - prev_values[0];
+                                    if raw_value < prev_values[0] {
+                                        *prev_values = [0; 7];
+                                    } else {
+                                        prev_values[1] = prev_values[2];
+                                        prev_values[2] = prev_values[3];
+                                        prev_values[3] = prev_values[4];
+                                        prev_values[4] = prev_values[5];
+                                        prev_values[5] = prev_values[6];
+                                        prev_values[6] = raw_value - prev_values[0];
+                                    }
                                     prev_values[0] = raw_value;
 
                                     let sum: u64 = prev_values.iter().skip(1).sum();
                                     let per_second = sum / 3;
-                                    label.set_label(&format!("{}/s", bytesize::to_string(per_second, true)));
+                                    let size = bytesize::to_string(per_second, true);
+                                    if verifying.load(Ordering::SeqCst) {
+                                        label.set_label(&format!("Verifying {}/s", size));
+                                    } else {
+                                        label.set_label(&format!("{}/s", size));
+                                    }
                                 }
                             }
 

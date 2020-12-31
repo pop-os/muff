@@ -45,6 +45,13 @@ impl App {
             }
         });
     }
+
+    pub fn connect_check(&self) {
+        let state = self.state.clone();
+        self.ui.content.image_view.check_button.connect_property_active_notify(move |button| {
+            state.check.set(button.get_active());
+        });
+    }
 }
 
 fn set_hash_widget(state: &State, ui: &GtkUi) {

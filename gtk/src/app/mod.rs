@@ -37,6 +37,7 @@ impl App {
         self.connect_image_drag_and_drop();
         self.connect_hash();
         self.connect_view_ready();
+        self.connect_check();
 
         self
     }

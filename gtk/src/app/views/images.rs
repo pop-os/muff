@@ -8,6 +8,7 @@ use std::path::Path;
 pub struct ImageView {
     pub view: View,
     pub check: Button,
+    pub check_button: CheckButton,
     pub chooser_container: Stack,
     pub chooser: Button,
     pub image_path: Label,
@@ -110,6 +111,11 @@ impl ImageView {
             ..set_margin_bottom(24);
         };
 
+        let check_button = cascade! {
+            gtk::CheckButton::with_label("Verify written data");
+            ..set_margin_top(6);
+        };
+
         let view = View::new(
             "application-x-cd-image",
             "Choose an Image",
@@ -118,10 +124,11 @@ impl ImageView {
             |right_panel| {
                 right_panel.pack_start(&chooser_container, true, false, 0);
                 right_panel.pack_start(&hash_container, false, false, 0);
+                right_panel.pack_start(&check_button, false, false, 0);
             },
         );
 
-        ImageView { view, check, chooser_container, chooser, image_path, hash, hash_label }
+        ImageView { view, check, check_button, chooser_container, chooser, image_path, hash, hash_label }
     }
 
     pub fn set_hash_sensitive(&self, sensitive: bool) {

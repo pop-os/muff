@@ -30,18 +30,22 @@ pub struct FlashRequest {
     status: Arc<Atomic<FlashStatus>>,
     progress: Arc<Vec<Atomic<u64>>>,
     finished: Arc<Vec<Atomic<bool>>>,
+    verifying: Arc<Vec<Atomic<bool>>>,
+    check: bool,
 }
 
 pub struct FlashTask {
     pub progress: Arc<Vec<Atomic<u64>>>,
     pub previous: Arc<Mutex<Vec<[u64; 7]>>>,
     pub finished: Arc<Vec<Atomic<bool>>>,
+    pub verifying: Arc<Vec<Atomic<bool>>>,
 }
 
 struct FlashProgress<'a> {
     request: &'a FlashRequest,
     id: usize,
     errors: &'a [Cell<Result<(), FlashError>>],
+    verifying: &'a [Atomic<bool>],
 }
 
 #[derive(Clone, Debug)]
@@ -62,10 +66,13 @@ impl<'a> Progress for FlashProgress<'a> {
     type Device = ();
 
     fn message(&mut self, _device: &(), kind: &str, message: &str) {
-        self.errors[self.id].set(Err(FlashError {
-            kind: kind.to_string(),
-            message: message.to_string(),
-        }));
+        self.verifying[self.id].store(kind == "V", Ordering::SeqCst);
+        if !message.is_empty() {
+            self.errors[self.id].set(Err(FlashError {
+                kind: kind.to_string(),
+                message: message.to_string(),
+            }));
+        }
     }
 
     fn finish(&mut self) {
@@ -84,8 +91,10 @@ impl FlashRequest {
         status: Arc<Atomic<FlashStatus>>,
         progress: Arc<Vec<Atomic<u64>>>,
         finished: Arc<Vec<Atomic<bool>>>,
+        verifying: Arc<Vec<Atomic<bool>>>,
+        check: bool,
     ) -> FlashRequest {
-        FlashRequest { source: Some(source), destinations, status, progress, finished }
+        FlashRequest { source: Some(source), destinations, status, progress, finished, verifying, check }
     }
 
     pub fn write(mut self) -> anyhow::Result<(anyhow::Result<()>, Vec<Result<(), FlashError>>)> {
@@ -125,9 +134,10 @@ impl FlashRequest {
         // How many bytes to write at a given time.
         let mut bucket = [0u8; 64 * 1024];
 
-        let mut task = Task::new(source.into(), false);
+        let mut task = Task::new(source.into(), self.check);
         for (i, file) in files.into_iter().enumerate() {
-            let progress = FlashProgress {request: &self, errors: errors_cells, id: i};
+            let verifying = &self.verifying;
+            let progress = FlashProgress {request: &self, errors: errors_cells, verifying, id: i};
             task.subscribe(file.into(), (), progress);
         }
 

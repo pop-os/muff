@@ -31,6 +31,8 @@ pub struct State {
 
     pub available_devices: RefCell<Box<[Arc<DiskDevice>]>>,
     pub selected_devices: RefCell<Vec<Arc<DiskDevice>>>,
+
+    pub check: Cell<bool>,
 }
 
 impl State {
@@ -61,6 +63,7 @@ impl State {
             image_size: Arc::new(Atomic::new(0u64)),
             available_devices: RefCell::new(Box::new([])),
             selected_devices: RefCell::new(Vec::new()),
+            check: Cell::new(false),
         }
     }
 }
