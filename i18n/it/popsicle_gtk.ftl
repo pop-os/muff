@@ -2,13 +2,13 @@ app-title = Creatore di immagini disco per USB
 
 # Images View
 cannot-select-directories = Il file manager non può selezionare le directory scelte
-check-label = Dai un'occhiata
+check-label = Mostra
 choose-image-button = Scegli Immagine
 generating-checksum = Genera Checksum
 hash-label = Hash:
-image-view-description = Seleziona il file .iso o .img che desideri applicare. Può essere collegato a un'unità USB ora.
+image-view-description = Seleziona il file .iso o .img che desideri applicare.
 image-view-title = Seleziona un'immagine
-no-image-selected = Nessuna Immagine selezionata
+no-image-selected = Nessuna immagine selezionata
 none = Nessuno
 warning = Attenzione:
 
